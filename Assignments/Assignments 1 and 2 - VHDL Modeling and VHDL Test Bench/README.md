@@ -1,5 +1,3 @@
-###### I pledge my honor that I have abided by the Stevens Honor System. @Calvin Zheng
-
 # Assignment 1: VHDL Modeling
 1. Find a VHDL model not included in the course material
 2. Add a comment citing the source
