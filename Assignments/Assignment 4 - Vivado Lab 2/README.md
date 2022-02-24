@@ -1,7 +1,7 @@
 # Assignment 4: Vivado Lab 2
 ###### Note: Each of these labs are referenced from Professor Kevin Lu's [dsd repository](https://github.com/kevinwlu/dsd).
 
-###### Since I am using a NI Digilent [Nexys A7-100T FPGA Trainer Board](https://digilent.com/reference/programmable-logic/nexys-a7/start?redirect=1), the relevant labs are [here](https://github.com/kevinwlu/dsd/tree/master/Nexys-A7). To go straight to Lab 2, [click here](https://github.com/kevinwlu/dsd/tree/master/Nexys-A7/Lab-2).
+###### Since I am using a [NI Digilent Nexys A7-100T FPGA Trainer Board](https://digilent.com/reference/programmable-logic/nexys-a7/start?redirect=1), the relevant labs are [here](https://github.com/kevinwlu/dsd/tree/master/Nexys-A7). To go straight to Lab 2, [click here](https://github.com/kevinwlu/dsd/tree/master/Nexys-A7/Lab-2).
 
 Open Vivado and create VHDL projects to synthesize, implement, generate bitstream, and program FPGA for
 1. Lab 2: Four-digit hex counter, generate and boot from a memory configuration file
@@ -26,6 +26,7 @@ Program Outcome 1: (*Complex Problem Solving*)
 		- Followed the instructions from [Generate and boot from configuration memory](https://github.com/kevinwlu/dsd/tree/master/Nexys-A7/Lab-2#6-generate-and-boot-from-configuration-memory-and-close-project)
 		- POWER OFF > POWER ON > Wait for 10 seconds > The program runs
 		- Download and watch [hex4count.mp4](./hex4count.mp4)
+		
 		![hex4count GIF](./hex4count.gif)
 	
 
@@ -35,4 +36,5 @@ Program Outcome 1: (*Complex Problem Solving*)
 	- The files can be found under the [Modifications](https://github.com/kevinwlu/dsd/tree/master/Nexys-A7/Lab-2/Modifications) directory in Lab-2
 	- Built an Eight-digit hex counter
 		- Download and watch [hex8count.mp4](./hex8count.mp4)
+		
 		![hex8count GIF](./hex8count.gif)
