@@ -13,9 +13,10 @@
 -- Dependencies: 
 -- 
 -- Revision:
--- Revision 0.02 - Adding buttons
+-- Revision 0.03 - Added mazeMap and separated RGB outputs
 -- Additional Comments:
--- 
+-- The RGB outputs for each component had to be in separate signals before being
+-- re-evaluated for each output pixel.
 ----------------------------------------------------------------------------------
 
 LIBRARY IEEE;
@@ -45,28 +46,57 @@ END MazeGame;
 ARCHITECTURE Behavioral OF MazeGame IS
     SIGNAL pxl_clk : STD_LOGIC;
 	
+	-------------------------------------------------------
+	-- VGA sync signals
+	-------------------------------------------------------
     -- internal signals to connect modules
-    SIGNAL S_red, S_green, S_blue : STD_LOGIC;
+    SIGNAL S_red, S_green, S_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL S_vsync : STD_LOGIC;
     SIGNAL S_pixel_row, S_pixel_col : STD_LOGIC_VECTOR (10 DOWNTO 0);
-    
+	
+	-------------------------------------------------------
+	-- ball signals
+	-------------------------------------------------------
+	SIGNAL ball_red, ball_green, ball_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
+	SIGNAL ball_on : STD_LOGIC;
+	
+	-------------------------------------------------------
+	-- mazeMap signals
+	-------------------------------------------------------
+	SIGNAL map_red, map_green, map_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
+	
+	-------------------------------------------------------
+	-------------------------------------------------------
+	
     COMPONENT ball IS
         PORT (
-            v_sync : IN STD_LOGIC;
-            pixel_row : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
-            pixel_col : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
-            red : OUT STD_LOGIC;
-            green : OUT STD_LOGIC;
-            blue : OUT STD_LOGIC;
+            v_sync 		: IN STD_LOGIC;
+            pixel_row 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+            pixel_col 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+            red 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+            green 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+            blue 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+			ball_on_out : OUT STD_LOGIC;
 			
-			moveL : IN STD_LOGIC;
-			moveR : IN STD_LOGIC;
-			moveU : IN STD_LOGIC;
-			moveD : IN STD_LOGIC;
-			interact : IN STD_LOGIC
+			moveL 		: IN STD_LOGIC;
+			moveR 		: IN STD_LOGIC;
+			moveU 		: IN STD_LOGIC;
+			moveD 		: IN STD_LOGIC;
+			interact 	: IN STD_LOGIC
         );
     END COMPONENT;
-    
+	
+	COMPONENT mazeMap IS
+		PORT ( 
+			v_sync 		: IN STD_LOGIC;
+            pixel_row 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+            pixel_col 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+            red 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+            green 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+            blue 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0)
+		);
+	END COMPONENT;
+	
     COMPONENT vga_sync IS
         PORT (
             pixel_clk : IN STD_LOGIC;
@@ -97,9 +127,10 @@ BEGIN
         v_sync    => S_vsync, 
         pixel_row => S_pixel_row, 
         pixel_col => S_pixel_col, 
-        red       => S_red, 
-        green     => S_green, 
-        blue      => S_blue,
+        red       => ball_red, 
+        green     => ball_green, 
+        blue      => ball_blue,
+		ball_on_out => ball_on,
 		
 		moveL	  => buttonL,
 		moveR	  => buttonR,
@@ -107,14 +138,41 @@ BEGIN
 		moveD	  => buttonD,
 		interact  => buttonC
     );
+	
+	display_mazeMap : mazeMap
+	PORT MAP( 
+		v_sync    => S_vsync, 
+        pixel_row => S_pixel_row, 
+        pixel_col => S_pixel_col, 
+        red       => map_red, 
+        green     => map_green, 
+        blue      => map_blue
 
+	);
+	
+	-- Process to determine final VGA signals
+	process is
+	begin
+		if (rising_edge(pxl_clk)) then
+			if (ball_on = '1') then
+				S_red <= ball_red;
+				S_green <= ball_green;
+				S_blue <= ball_blue;
+			else
+				S_red <= map_red;
+				S_green <= map_green;
+				S_blue <= map_blue;
+			end if;
+		end if;
+	end process;
+		
     vga_driver : vga_sync
     PORT MAP(
         --instantiate vga_sync component
         pixel_clk => pxl_clk, 
-        red_in    => S_red & "000", 
-        green_in  => S_green & "000", 
-        blue_in   => S_blue & "000", 
+        red_in    => S_red, 
+        green_in  => S_green, 
+        blue_in   => S_blue, 
         red_out   => VGA_red,
         green_out => VGA_green, 
         blue_out  => VGA_blue, 
