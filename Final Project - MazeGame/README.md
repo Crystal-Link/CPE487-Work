@@ -40,4 +40,19 @@ At long last, the resulting output is generated and shown in the image below:
 
 ![grid_map.jpg](./Images/grid_map.jpg)
 
-### 4. Filling in the maze map
+### 4. Filling in the maze map (a.k.a level making)
+Now, with the grid working, I want to begin filling in each cell with respective colors to represent components of the maze. I also wanted to make this process as abstract as possible so that level making and editing, as well as attaching multiple levels to the game very easy to do down the line. To do this, I created a new design source, `level0.vhd`, where I will define the characteristics of the level such as cell size and starting/ending pixels as well as the components that are in each cell. Instead of defining each of the 720x720 pixels the screen, I mapped each cell area to a pixel at the cell's corner using integer math. Therefore, to define the whole map, I would only have to define the NxN cell corners that make up the grid (in this case, 30x30). Thank you @PeterHo8888 for helping me understand this concept.
+
+Within each of the cells, I would define a 2-bit `std_logic_vector` that would define what component is at that cell. In this case, I have mapped `00 = nothing (default); 01 = wall; 10 = exit`. More bits can be added downt the line in the case that more components need to be added to the game. To create and edit the maze map, the programmer would just have to specify what each cell is in the 2D array of cells.
+
+Then, `level0.vhd` would output the map information to the top level, which gets passed along to `mazeMap.vhd` where the map gets drawn and the correct RGB signals are set and passed to the VGA output. `mazeMap.vhd` is also where the colors for each component is specified.
+
+The sample map I have made for testing purposes is shown in the image below:
+
+![map_fill_with_grid.jpg](./Images/map_fill_with_grid.jpg)
+
+Then, once you remove the grid from the map (just do not draw the grid to begin with), it looks like this:
+
+![map_fill_no_grid.jpg](./Images/map_fill_no_grid.jpg)
+
+### 5. Ball collision and interaction with components

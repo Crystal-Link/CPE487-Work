@@ -12,7 +12,8 @@ ENTITY ball IS
 		green     : OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
 		blue      : OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
 		
-		ball_on_out : OUT STD_LOGIC;
+		ball_on_out		 : OUT STD_LOGIC;
+		components_in	 : IN STD_LOGIC_VECTOR (1 DOWNTO 0);
 		
 		moveL     : IN STD_LOGIC;
 		moveR     : IN STD_LOGIC;

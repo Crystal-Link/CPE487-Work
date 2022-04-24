@@ -13,10 +13,10 @@
 -- Dependencies: 
 -- 
 -- Revision:
--- Revision 0.03 - Added mazeMap and separated RGB outputs
+-- Revision 0.04 - Added level creation
 -- Additional Comments:
--- The RGB outputs for each component had to be in separate signals before being
--- re-evaluated for each output pixel.
+-- Made the map making process more abstract so levels can be created and edited
+-- more easily.
 ----------------------------------------------------------------------------------
 
 LIBRARY IEEE;
@@ -64,6 +64,9 @@ ARCHITECTURE Behavioral OF MazeGame IS
 	-- mazeMap signals
 	-------------------------------------------------------
 	SIGNAL map_red, map_green, map_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
+	SIGNAL cell_size_pass, start_x_pass, start_y_pass : INTEGER;
+	SIGNAL end_x_pass, end_y_pass : INTEGER;
+	SIGNAL components_pass : STD_LOGIC_VECTOR(1 DOWNTO 0); -- # of bits depends on # of components
 	
 	-------------------------------------------------------
 	-------------------------------------------------------
@@ -76,7 +79,9 @@ ARCHITECTURE Behavioral OF MazeGame IS
             red 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
             green 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
             blue 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
-			ball_on_out : OUT STD_LOGIC;
+			
+			ball_on_out 	: OUT STD_LOGIC;
+			components_in	: IN STD_LOGIC_VECTOR (1 DOWNTO 0);
 			
 			moveL 		: IN STD_LOGIC;
 			moveR 		: IN STD_LOGIC;
@@ -93,7 +98,30 @@ ARCHITECTURE Behavioral OF MazeGame IS
             pixel_col 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
             red 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
             green 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
-            blue 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0)
+            blue 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+			
+			cell_size_in	: IN INTEGER;
+			start_x_in		: IN INTEGER;
+			start_y_in		: IN INTEGER;
+			end_x_in		: IN INTEGER;
+			end_y_in		: IN INTEGER;
+			
+			components_in	: IN STD_LOGIC_VECTOR (1 DOWNTO 0)
+		);
+	END COMPONENT;
+	
+	COMPONENT level0 IS
+		PORT (
+			pixel_row 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+            pixel_col 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			
+			cell_size_out	: OUT INTEGER;
+			start_x_out		: OUT INTEGER;
+			start_y_out		: OUT INTEGER;
+			end_x_out		: OUT INTEGER;
+			end_y_out		: OUT INTEGER;
+			
+			components_out	: OUT STD_LOGIC_VECTOR(1 DOWNTO 0)
 		);
 	END COMPONENT;
 	
@@ -130,7 +158,9 @@ BEGIN
         red       => ball_red, 
         green     => ball_green, 
         blue      => ball_blue,
+		
 		ball_on_out => ball_on,
+		components_in => components_pass,
 		
 		moveL	  => buttonL,
 		moveR	  => buttonR,
@@ -146,23 +176,44 @@ BEGIN
         pixel_col => S_pixel_col, 
         red       => map_red, 
         green     => map_green, 
-        blue      => map_blue
-
+        blue      => map_blue,
+		
+		cell_size_in => cell_size_pass,
+		start_x_in 	=> start_x_pass,
+		start_y_in 	=> start_y_pass,
+		end_x_in 	=> end_x_pass,
+		end_y_in	=> end_y_pass,
+		
+		components_in => components_pass
+	);
+	
+	define_level0 : level0
+	PORT MAP(
+		pixel_row => S_pixel_row,
+		pixel_col => S_pixel_col,
+		
+		cell_size_out => cell_size_pass,
+		start_x_out => start_x_pass,
+		start_y_out => start_y_pass,
+		end_x_out	=> end_x_pass,
+		end_y_out	=> end_y_pass,
+		
+		components_out => components_pass
 	);
 	
 	-- Process to determine final VGA signals
 	process is
 	begin
-		if (rising_edge(pxl_clk)) then
-			if (ball_on = '1') then
-				S_red <= ball_red;
-				S_green <= ball_green;
-				S_blue <= ball_blue;
-			else
-				S_red <= map_red;
-				S_green <= map_green;
-				S_blue <= map_blue;
-			end if;
+		wait until rising_edge(pxl_clk);
+		
+		if (ball_on = '1') then
+			S_red <= ball_red;
+			S_green <= ball_green;
+			S_blue <= ball_blue;
+		else
+			S_red <= map_red;
+			S_green <= map_green;
+			S_blue <= map_blue;
 		end if;
 	end process;
 		
