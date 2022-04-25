@@ -3,10 +3,10 @@
 In this project, I decide to recreate a maze game using an FPGA board, more specifically the [NI Digilent Nexys A7-100T FPGA Trainer Board](https://digilent.com/reference/programmable-logic/nexys-a7/start?redirect=1).
 
 ## Concept
-1. Generate a maze map
+1. Create a set of maze levels
 2. Allow users to control a ball that would move through the maze
 3. Upon reaching the end, move on to the next level
-4. After finishing all made levels, present an end screen
+4. After finishing all made levels, go back to the start
 
 ## Steps
 ### 1. Getting a VGA signal to display on a montior
@@ -56,3 +56,26 @@ Then, once you remove the grid from the map (just do not draw the grid to begin 
 ![map_fill_no_grid.jpg](./Images/map_fill_no_grid.jpg)
 
 ### 5. Ball collision and interaction with components
+Almost at the end now. This next step involves getting the ball to detect collisions with the components on the pre-defined map. The setup from the previous step would not work, since there are no signals being ported into `ball.vhd` that would allow the ball to "see" what it is running into. Therefore, I had to restructure the project. At the top level, in `MazeGame.vhd`, I now define a package that would include the definition for the type `cell_matrix` which is the N by N 2D array of cells mentioned in the previous step. This package gets extended to each of the project's modules for use. This way, the level modules can define its cell array and pass it to other modules *as a whole* through the top level.
+
+This allowed for several changes:
+1. Now, the level modules do not have to port out a 2-bit `std_logic_vector` defining what component is at the current pixel -- instead it passes out the entire array for all of the other modules to use.
+	1. This also means that now the level modules include strictly the maze definitions and does no calculations whatsoever.
+2. The `mazeMap.vhd` module now does the integer math for itself to map cell areas to their respective corners before determining what RGB signals are to be sent for each pixel.
+3. The `ball.vhd` module now has access to the entire cell array and will now be able to determine if the ball collides with other components of the maze.
+
+The first issue that I ran into while performing these changes was that at the top level, `MazeGame.vhd`, if I want to pass the cell array to other modules, I would have to initialize a signal of the same exact type. The original plan was that I would be able to incorporate levels of different grid/cell sizes as the game progressed. However, since this is still hardware, the signal I declare at the top level to pass the array must be of a constant size and must be the same size as the cell array declared in the level definition. Since I have no way of passing a constant from the level module to the top level, the array size must be hard-coded at the top level to match that of the level module (unfortunately). 
+
+The next issue that I ran into was that in trying to implement ball collision with walls, somehow the ball's initial position was thrown off. What fixed this in the end was to first convert the `std_logic_vector` map information into constant integers that are declared in the architecture of the module, then using these constant integers to perform signal/variable calculations instead of keeping the map information as `std_logic_vector` signals.
+
+The idea behind the ball collision is to check if any of the 4 edge pixels -- left, right, up, and down -- get mapped onto a component in the cell array. If it does, then perform appropriate actions. Although a slight offset is required for the top and left edges, the collision did end up working and the ball stops upon hitting a wall. While I did not yet code level transition for when the ball reaches an exit, since wall collision works it is safe to assume that the ball is able to detect collision with any component defined in the cell array.
+
+**NOTE: There are some known issues/bugs with the current setup, but it should not affect the way MazeGame is played. The issues are as such:**
+1. *If the ball is against a "wall" component and the user continues to press the same directional button repeatedly, the ball will clip into the "wall" slightly, but stop at a certain point.*
+	1. Should not affect the game since the ball is unable to completely go through the "wall" and must go in the opposite direction to get out of the "wall." Unfortunately, I am unsure of why this is possible and can not suggest a fix at the moment.
+2. *Since only the 4 edge pixels of the ball are being checked, the ball is able to visually slide into the "wall" at corners if the edge pixel that is being checked is just slightly above the "wall".*
+	1. Again, the ball is still unable to completely go through such "walls", thus this shouldn't be an issue. To fix this, the module would have to check every pixel along the ball's edge (which would be tedious).
+
+The result are as such:
+
+![maze_component_collision.gif](./Images/maze_component_collision.gif)

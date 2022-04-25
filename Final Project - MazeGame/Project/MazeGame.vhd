@@ -23,8 +23,24 @@ LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.STD_LOGIC_UNSIGNED.ALL;
 
+-- grid definition
+-- defines the grid as a N by N 2d array where each cell contains a std_logic_vector
+package cell_matrix_def is
+	-- # of bits depends on # of components in the game
+	type cell_matrix is array (natural range <>, natural range <>) of std_logic_vector(1 downto 0);
+end package;
+
+----------------------------------------------------------------------------------
+
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_UNSIGNED.ALL;
+-- package definition above
+use work.all;
+use work.cell_matrix_def.all;
+
 ENTITY MazeGame IS
-    PORT (
+	PORT (
         clk_in      : IN STD_LOGIC; -- system clock
         
         -- VGA outputs
@@ -59,15 +75,28 @@ ARCHITECTURE Behavioral OF MazeGame IS
 	-------------------------------------------------------
 	SIGNAL ball_red, ball_green, ball_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
 	SIGNAL ball_on : STD_LOGIC;
+	SIGNAL ball_x_init_pass, ball_y_init_pass : STD_LOGIC_VECTOR(10 DOWNTO 0);
 	
 	-------------------------------------------------------
 	-- mazeMap signals
 	-------------------------------------------------------
 	SIGNAL map_red, map_green, map_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
-	SIGNAL cell_size_pass, start_x_pass, start_y_pass : INTEGER;
-	SIGNAL end_x_pass, end_y_pass : INTEGER;
-	SIGNAL components_pass : STD_LOGIC_VECTOR(1 DOWNTO 0); -- # of bits depends on # of components
+	SIGNAL cell_size_pass, start_x_pass, start_y_pass : STD_LOGIC_VECTOR(10 DOWNTO 0);
+	SIGNAL end_x_pass, end_y_pass : STD_LOGIC_VECTOR(10 DOWNTO 0);
 	
+	
+	-- NOTE: PLEASE MAKE SURE THE AMOUNT HERE = AMOUNT VALUE DEFINED IN THE LEVELS.
+	
+	-- I wanted to make the level grid/cell sizes dynamic, but if I want to pass the entire
+	-- array through this top level (which is necessary for collision detection), 
+	-- I don't think I can. The array definition here MUST HAVE A CONSTANT SIZE since the
+	-- hardware cannot change in the middle of the program (it's still HARDWARE).
+	
+	-- This also means the grid/cell sizes for ALL levels must be the same... sad
+
+	-- CONSTANT amount : INTEGER := CONV_INTEGER(end_y_pass) / CONV_INTEGER(cell_size_pass);
+	CONSTANT amount : INTEGER := 30;
+	SIGNAL cell_arr_pass : CELL_MATRIX(0 TO amount, 0 TO amount);
 	-------------------------------------------------------
 	-------------------------------------------------------
 	
@@ -81,7 +110,16 @@ ARCHITECTURE Behavioral OF MazeGame IS
             blue 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
 			
 			ball_on_out 	: OUT STD_LOGIC;
-			components_in	: IN STD_LOGIC_VECTOR (1 DOWNTO 0);
+			cell_arr_in		: IN CELL_MATRIX;
+			
+			cell_size_in	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			start_x_in		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			start_y_in		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			end_x_in		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			end_y_in		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			
+			ball_x_init_in : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			ball_y_init_in : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
 			
 			moveL 		: IN STD_LOGIC;
 			moveR 		: IN STD_LOGIC;
@@ -93,20 +131,19 @@ ARCHITECTURE Behavioral OF MazeGame IS
 	
 	COMPONENT mazeMap IS
 		PORT ( 
-			v_sync 		: IN STD_LOGIC;
             pixel_row 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
             pixel_col 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
             red 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
             green 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
             blue 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
 			
-			cell_size_in	: IN INTEGER;
-			start_x_in		: IN INTEGER;
-			start_y_in		: IN INTEGER;
-			end_x_in		: IN INTEGER;
-			end_y_in		: IN INTEGER;
+			cell_size_in	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			start_x_in		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			start_y_in		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			end_x_in		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			end_y_in		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
 			
-			components_in	: IN STD_LOGIC_VECTOR (1 DOWNTO 0)
+			cell_arr_in		: IN CELL_MATRIX
 		);
 	END COMPONENT;
 	
@@ -115,13 +152,16 @@ ARCHITECTURE Behavioral OF MazeGame IS
 			pixel_row 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
             pixel_col 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
 			
-			cell_size_out	: OUT INTEGER;
-			start_x_out		: OUT INTEGER;
-			start_y_out		: OUT INTEGER;
-			end_x_out		: OUT INTEGER;
-			end_y_out		: OUT INTEGER;
+			cell_size_out	: OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			start_x_out		: OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			start_y_out		: OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			end_x_out		: OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			end_y_out		: OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
 			
-			components_out	: OUT STD_LOGIC_VECTOR(1 DOWNTO 0)
+			ball_x_init_out : OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			ball_y_init_out : OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			
+			cell_arr_out	: OUT CELL_MATRIX
 		);
 	END COMPONENT;
 	
@@ -160,7 +200,16 @@ BEGIN
         blue      => ball_blue,
 		
 		ball_on_out => ball_on,
-		components_in => components_pass,
+		cell_arr_in	=> cell_arr_pass,
+		
+		cell_size_in => cell_size_pass,
+		start_x_in 	=> start_x_pass,
+		start_y_in 	=> start_y_pass,
+		end_x_in 	=> end_x_pass,
+		end_y_in	=> end_y_pass,
+		
+		ball_x_init_in => ball_x_init_pass,
+		ball_y_init_in => ball_y_init_pass,
 		
 		moveL	  => buttonL,
 		moveR	  => buttonR,
@@ -171,7 +220,6 @@ BEGIN
 	
 	display_mazeMap : mazeMap
 	PORT MAP( 
-		v_sync    => S_vsync, 
         pixel_row => S_pixel_row, 
         pixel_col => S_pixel_col, 
         red       => map_red, 
@@ -184,7 +232,7 @@ BEGIN
 		end_x_in 	=> end_x_pass,
 		end_y_in	=> end_y_pass,
 		
-		components_in => components_pass
+		cell_arr_in	  => cell_arr_pass
 	);
 	
 	define_level0 : level0
@@ -198,7 +246,10 @@ BEGIN
 		end_x_out	=> end_x_pass,
 		end_y_out	=> end_y_pass,
 		
-		components_out => components_pass
+		ball_x_init_out => ball_x_init_pass,
+		ball_y_init_out => ball_y_init_pass,
+		
+		cell_arr_out   => cell_arr_pass
 	);
 	
 	-- Process to determine final VGA signals
@@ -239,5 +290,5 @@ BEGIN
       clk_in1 => clk_in,
       clk_out1 => pxl_clk
     );
-    
+	
 END Behavioral;

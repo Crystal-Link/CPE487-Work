@@ -3,6 +3,10 @@ USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.STD_LOGIC_ARITH.ALL;
 USE IEEE.STD_LOGIC_UNSIGNED.ALL;
 
+-- package definition from MazeGame.vhd
+use work.all;
+use work.cell_matrix_def.all;
+
 ENTITY ball IS
 	PORT (
 		v_sync    : IN STD_LOGIC;
@@ -13,7 +17,16 @@ ENTITY ball IS
 		blue      : OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
 		
 		ball_on_out		 : OUT STD_LOGIC;
-		components_in	 : IN STD_LOGIC_VECTOR (1 DOWNTO 0);
+		cell_arr_in		 : IN CELL_MATRIX;
+		
+		cell_size_in	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+		start_x_in 		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+		start_y_in 		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+		end_x_in		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+		end_y_in		: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+		
+		ball_x_init_in : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+		ball_y_init_in : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
 		
 		moveL     : IN STD_LOGIC;
 		moveR     : IN STD_LOGIC;
@@ -28,12 +41,20 @@ ARCHITECTURE Behavioral OF ball IS
 	SIGNAL ball_on : STD_LOGIC; -- indicates whether ball is over current pixel position
 	
 	-- current ball position - intitialized to center of screen
-	SIGNAL ball_x  : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(640, 11);
-	SIGNAL ball_y  : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(360, 11);
+	SIGNAL ball_x  : STD_LOGIC_VECTOR(10 DOWNTO 0) := ball_x_init_in;
+	SIGNAL ball_y  : STD_LOGIC_VECTOR(10 DOWNTO 0) := ball_y_init_in;
+	
+	constant cell_size  : integer := conv_integer(cell_size_in);
+	constant start_x	: integer := conv_integer(start_x_in);
+	constant start_y	: integer := conv_integer(start_y_in);
+	constant end_x		: integer := conv_integer(end_x_in);
+	constant end_y		: integer := conv_integer(end_y_in);
+	
+	signal fill_x, fill_y   : integer;
 	
 BEGIN
 	red   <= "1000"; -- color setup for red ball
-	green 	<= "0000";
+	green <= "0000";
 	blue  <= "0000";
 	-- process to draw ball current pixel address is covered by ball position
 	bdraw : PROCESS (ball_x, ball_y, pixel_row, pixel_col) IS
@@ -60,6 +81,7 @@ BEGIN
 		VARIABLE y_pos : INTEGER := CONV_INTEGER(ball_y);
 		VARIABLE ball_x_motion : INTEGER := 0;
 		VARIABLE ball_y_motion : INTEGER := 0;
+
 	BEGIN
 		WAIT UNTIL rising_edge(v_sync);
 		
@@ -80,26 +102,60 @@ BEGIN
 		x_pos := x_pos + ball_x_motion;
 		y_pos := y_pos + ball_y_motion;
 		
-		-- collision check
-		IF x_pos + size >= 1280 THEN
-			x_pos := 1280 - size;
+		-----------------------------------------------------------------
+		-- collision checks
+		-----------------------------------------------------------------
+		-- keep the ball within playing field
+		IF x_pos + size >= end_x THEN
+			x_pos := end_x - size;
 			ball_x_motion := 0;
-		ELSIF x_pos <= size THEN
-			x_pos := 0 + size;
+		ELSIF x_pos - size <= start_x THEN
+			x_pos := start_x + size;
 			ball_x_motion := 0;
 		END IF;
 		
-		IF y_pos + size >= 720 THEN
-			y_pos := 720 - size;
+		IF y_pos + size >= end_y THEN
+			y_pos := end_y - size;
 			ball_y_motion := 0;
-		ELSIF y_pos <= size THEN
-			y_pos := 0 + size;
+		ELSIF y_pos - size <= start_y THEN
+			y_pos := start_y + size;
 			ball_y_motion := 0;
 		END IF;
 		
+		
+		-- check for collision with map components
+		-- checks position for all 4 directions of the ball (4 points on the edges)
+		-- NOTE: The top and left edges requires a slight offset
+		IF moveL = '1' AND moveR = '0' AND moveU = '0' AND moveD = '0' THEN
+			fill_x <= ((x_pos - size - 3) - start_x) / cell_size;
+		ELSIF moveL = '0' AND moveR = '1' AND moveU = '0' AND moveD = '0' THEN
+			fill_x <= ((x_pos + size) - start_x) / cell_size;
+		ELSIF moveL = '0' AND moveR = '0' AND moveU = '1' AND moveD = '0' THEN
+			fill_y <= ((y_pos - size - 3) - start_y) / cell_size;
+		ELSIF moveL = '0' AND moveR = '0' AND moveU = '0' AND moveD = '1' THEN
+			fill_y <= ((y_pos + size) - start_y) / cell_size;
+		ELSE
+			fill_x <= ((x_pos) - start_x) / cell_size;
+			fill_y <= ((y_pos) - start_y) / cell_size;
+		END IF;
+		
+		IF (cell_arr_in(fill_y, fill_x) = "01") THEN -- wall
+			y_pos := y_pos - ball_y_motion;
+			ball_y_motion := 0;
+			x_pos := x_pos - ball_x_motion;
+			ball_x_motion := 0;
+		ELSIF (cell_arr_in(fill_y, fill_x) = "10") THEN -- exit
+			-- INSERT LEVEL TRANSITION
+		END IF;
+		
+		
+
+		-----------------------------------------------------------------
+		
+		-- reset the ball to initial position
 		IF interact = '1' THEN
-			x_pos := 640;
-			y_pos := 360;
+			x_pos := conv_integer(ball_x_init_in);
+			y_pos := conv_integer(ball_y_init_in);
 		END IF;
 		
 		ball_x  <= CONV_STD_LOGIC_VECTOR(x_pos, 11);
