@@ -176,6 +176,23 @@ begin
 	cell_arr(13,29) <= "01";
 	cell_arr(16,29) <= "01";
 	
+	cell_arr(13,13) <= "01";
+	cell_arr(13,14) <= "01";
+	cell_arr(13,15) <= "01";
+	cell_arr(13,16) <= "01";
+	cell_arr(14,13) <= "01";
+	cell_arr(14,14) <= "01";
+	cell_arr(14,15) <= "01";
+	cell_arr(14,16) <= "01";
+	cell_arr(15,13) <= "01";
+	cell_arr(15,14) <= "01";
+	cell_arr(15,15) <= "01";
+	cell_arr(15,16) <= "01";
+	cell_arr(16,13) <= "01";
+	cell_arr(16,14) <= "01";
+	cell_arr(16,15) <= "01";
+	cell_arr(16,16) <= "01";
+	
 	cell_arr(14,29) <= "10";
 	cell_arr(15,29) <= "10";
 

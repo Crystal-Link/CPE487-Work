@@ -17,6 +17,7 @@ ENTITY ball IS
 		blue      : OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
 		
 		ball_on_out		 : OUT STD_LOGIC;
+		level_count_out	 : OUT STD_LOGIC_VECTOR (2 DOWNTO 0);
 		cell_arr_in		 : IN CELL_MATRIX;
 		
 		cell_size_in	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
@@ -28,6 +29,7 @@ ENTITY ball IS
 		ball_x_init_in : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
 		ball_y_init_in : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
 		
+		button_reset: IN STD_LOGIC;
 		moveL     : IN STD_LOGIC;
 		moveR     : IN STD_LOGIC;
 		moveU     : IN STD_LOGIC;
@@ -37,6 +39,11 @@ ENTITY ball IS
 END ball;
 
 ARCHITECTURE Behavioral OF ball IS
+	SIGNAL level_count : STD_LOGIC_VECTOR(2 DOWNTO 0) := (others => '0');
+	-- intentionally set old counter to be different to
+	-- force reset ball initial position
+	SIGNAL level_count_old : STD_LOGIC_VECTOR(2 DOWNTO 0) := (others => '1');
+	
 	CONSTANT size  : INTEGER := 8;
 	SIGNAL ball_on : STD_LOGIC; -- indicates whether ball is over current pixel position
 	
@@ -139,16 +146,15 @@ BEGIN
 			fill_y <= ((y_pos) - start_y) / cell_size;
 		END IF;
 		
+		-- 00 = nothing (default), 01 = wall, 10 = exit
 		IF (cell_arr_in(fill_y, fill_x) = "01") THEN -- wall
 			y_pos := y_pos - ball_y_motion;
 			ball_y_motion := 0;
 			x_pos := x_pos - ball_x_motion;
 			ball_x_motion := 0;
 		ELSIF (cell_arr_in(fill_y, fill_x) = "10") THEN -- exit
-			-- INSERT LEVEL TRANSITION
+			level_count <= conv_std_logic_vector((conv_integer(level_count) + 1),3);
 		END IF;
-		
-		
 
 		-----------------------------------------------------------------
 		
@@ -158,8 +164,26 @@ BEGIN
 			y_pos := conv_integer(ball_y_init_in);
 		END IF;
 		
+		-- reset to level0
+		-- CPU_RESETN is inverse to the other buttons
+		IF button_reset = '0' THEN
+			level_count <= (others => '0');
+			level_count_old <= (others => '1');
+		END IF;
+		
+		-- Since signals do not update until the process is finished,
+		-- I am adding a second count signal so that once a level change
+		-- occurs, this statement triggers and sets the ball to its real
+		-- initial position.
+		IF level_count_old /= level_count THEN
+			x_pos := conv_integer(ball_x_init_in);
+			y_pos := conv_integer(ball_y_init_in);
+			level_count_old <= level_count;
+		END IF;
+		
 		ball_x  <= CONV_STD_LOGIC_VECTOR(x_pos, 11);
 		ball_y  <= CONV_STD_LOGIC_VECTOR(y_pos, 11);
-		
+		level_count_out <= level_count;
 	END PROCESS;
+	
 END Behavioral;

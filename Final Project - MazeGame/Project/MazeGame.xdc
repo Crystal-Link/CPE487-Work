@@ -22,6 +22,7 @@ set_property -dict { PACKAGE_PIN B11   IOSTANDARD LVCMOS33 } [get_ports { VGA_hs
 set_property -dict { PACKAGE_PIN B12   IOSTANDARD LVCMOS33 } [get_ports { VGA_vsync }]; #IO_L3N_T0_DQS_AD1N_15 Sch=vga_vs
 
 ## Onboard Buttons
+set_property -dict { PACKAGE_PIN C12   IOSTANDARD LVCMOS33 } [get_ports { buttonReset }]; #IO_L3P_T0_DQS_AD1P_15 Sch=cpu_resetn
 set_property -dict { PACKAGE_PIN N17   IOSTANDARD LVCMOS33 } [get_ports { buttonC }]; #IO_L9P_T1_DQS_14 Sch=btnc
 set_property -dict { PACKAGE_PIN M18   IOSTANDARD LVCMOS33 } [get_ports { buttonU }]; #IO_L4N_T0_D05_14 Sch=btnu
 set_property -dict { PACKAGE_PIN P17   IOSTANDARD LVCMOS33 } [get_ports { buttonL }]; #IO_L12P_T1_MRCC_14 Sch=btnl

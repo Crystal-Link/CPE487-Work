@@ -13,7 +13,7 @@
 -- Dependencies: 
 -- 
 -- Revision:
--- Revision 0.04 - Added level creation
+-- Revision 0.06 - Added level transition
 -- Additional Comments:
 -- Made the map making process more abstract so levels can be created and edited
 -- more easily.
@@ -51,6 +51,7 @@ ENTITY MazeGame IS
         VGA_vsync   : OUT STD_LOGIC;
         
         -- buttons for movement
+		buttonReset : IN STD_LOGIC; -- reset button (CPU_RESETN)
         buttonL     : IN STD_LOGIC; -- left button (BTNL)
         buttonR     : IN STD_LOGIC; -- right button (BTNR)
         buttonU     : IN STD_LOGIC; -- up button (BTNU)
@@ -97,6 +98,25 @@ ARCHITECTURE Behavioral OF MazeGame IS
 	-- CONSTANT amount : INTEGER := CONV_INTEGER(end_y_pass) / CONV_INTEGER(cell_size_pass);
 	CONSTANT amount : INTEGER := 30;
 	SIGNAL cell_arr_pass : CELL_MATRIX(0 TO amount, 0 TO amount);
+	
+	-------------------------------------------------------
+	-- level signals
+	-------------------------------------------------------
+	-- level transition counter
+	SIGNAL level_count : STD_LOGIC_VECTOR(2 DOWNTO 0);
+	
+	-- level0 signals
+	SIGNAL ball_x_init_0, ball_y_init_0 : STD_LOGIC_VECTOR(10 DOWNTO 0);
+	SIGNAL cell_size_0, start_x_0, start_y_0 : STD_LOGIC_VECTOR(10 DOWNTO 0);
+	SIGNAL end_x_0, end_y_0 : STD_LOGIC_VECTOR(10 DOWNTO 0);
+	SIGNAL cell_arr_0 : CELL_MATRIX(0 TO amount, 0 TO amount);
+	
+	-- level1 signals
+	SIGNAL ball_x_init_1, ball_y_init_1 : STD_LOGIC_VECTOR(10 DOWNTO 0);
+	SIGNAL cell_size_1, start_x_1, start_y_1 : STD_LOGIC_VECTOR(10 DOWNTO 0);
+	SIGNAL end_x_1, end_y_1 : STD_LOGIC_VECTOR(10 DOWNTO 0);
+	SIGNAL cell_arr_1 : CELL_MATRIX(0 TO amount, 0 TO amount);
+	
 	-------------------------------------------------------
 	-------------------------------------------------------
 	
@@ -110,6 +130,7 @@ ARCHITECTURE Behavioral OF MazeGame IS
             blue 		: OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
 			
 			ball_on_out 	: OUT STD_LOGIC;
+			level_count_out : OUT STD_LOGIC_VECTOR(2 DOWNTO 0);
 			cell_arr_in		: IN CELL_MATRIX;
 			
 			cell_size_in	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
@@ -121,6 +142,7 @@ ARCHITECTURE Behavioral OF MazeGame IS
 			ball_x_init_in : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
 			ball_y_init_in : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
 			
+			button_reset : IN STD_LOGIC;
 			moveL 		: IN STD_LOGIC;
 			moveR 		: IN STD_LOGIC;
 			moveU 		: IN STD_LOGIC;
@@ -165,6 +187,26 @@ ARCHITECTURE Behavioral OF MazeGame IS
 		);
 	END COMPONENT;
 	
+	COMPONENT level1 IS
+		PORT (
+			pixel_row 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+            pixel_col 	: IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+			
+			cell_size_out	: OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			start_x_out		: OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			start_y_out		: OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			end_x_out		: OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			end_y_out		: OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			
+			ball_x_init_out : OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			ball_y_init_out : OUT STD_LOGIC_VECTOR(10 DOWNTO 0);
+			
+			cell_arr_out	: OUT CELL_MATRIX
+		);
+	END COMPONENT;
+	
+	-- To add more levels, additional level components must be added
+	
     COMPONENT vga_sync IS
         PORT (
             pixel_clk : IN STD_LOGIC;
@@ -200,6 +242,7 @@ BEGIN
         blue      => ball_blue,
 		
 		ball_on_out => ball_on,
+		level_count_out => level_count,
 		cell_arr_in	=> cell_arr_pass,
 		
 		cell_size_in => cell_size_pass,
@@ -211,6 +254,7 @@ BEGIN
 		ball_x_init_in => ball_x_init_pass,
 		ball_y_init_in => ball_y_init_pass,
 		
+		button_reset => buttonReset,
 		moveL	  => buttonL,
 		moveR	  => buttonR,
 		moveU	  => buttonU,
@@ -240,22 +284,59 @@ BEGIN
 		pixel_row => S_pixel_row,
 		pixel_col => S_pixel_col,
 		
-		cell_size_out => cell_size_pass,
-		start_x_out => start_x_pass,
-		start_y_out => start_y_pass,
-		end_x_out	=> end_x_pass,
-		end_y_out	=> end_y_pass,
+		cell_size_out => cell_size_0,
+		start_x_out => start_x_0,
+		start_y_out => start_y_0,
+		end_x_out	=> end_x_0,
+		end_y_out	=> end_y_0,
 		
-		ball_x_init_out => ball_x_init_pass,
-		ball_y_init_out => ball_y_init_pass,
+		ball_x_init_out => ball_x_init_0,
+		ball_y_init_out => ball_y_init_0,
 		
-		cell_arr_out   => cell_arr_pass
+		cell_arr_out   => cell_arr_0
 	);
 	
-	-- Process to determine final VGA signals
-	process is
+	define_level1 : level1
+	PORT MAP(
+		pixel_row => S_pixel_row,
+		pixel_col => S_pixel_col,
+		
+		cell_size_out => cell_size_1,
+		start_x_out => start_x_1,
+		start_y_out => start_y_1,
+		end_x_out	=> end_x_1,
+		end_y_out	=> end_y_1,
+		
+		ball_x_init_out => ball_x_init_1,
+		ball_y_init_out => ball_y_init_1,
+		
+		cell_arr_out   => cell_arr_1
+	);
+	
+	-- Process to determine final VGA signals and which level is being played
+	process
 	begin
 		wait until rising_edge(pxl_clk);
+			
+		if (level_count = "000") then
+			cell_size_pass <= cell_size_0;
+			start_x_pass <= start_x_0;
+			start_y_pass <= start_y_0;
+			end_x_pass <= end_x_0;
+			end_y_pass <= end_y_0;
+			ball_x_init_pass <= ball_x_init_0;
+			ball_y_init_pass <= ball_y_init_0;
+			cell_arr_pass <= cell_arr_0;
+		else
+			cell_size_pass <= cell_size_1;
+			start_x_pass <= start_x_1;
+			start_y_pass <= start_y_1;
+			end_x_pass <= end_x_1;
+			end_y_pass <= end_y_1;
+			ball_x_init_pass <= ball_x_init_1;
+			ball_y_init_pass <= ball_y_init_1;
+			cell_arr_pass <= cell_arr_1;
+		end if;
 		
 		if (ball_on = '1') then
 			S_red <= ball_red;
@@ -266,6 +347,7 @@ BEGIN
 			S_green <= map_green;
 			S_blue <= map_blue;
 		end if;
+			
 	end process;
 		
     vga_driver : vga_sync

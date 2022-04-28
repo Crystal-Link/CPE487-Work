@@ -75,7 +75,27 @@ The idea behind the ball collision is to check if any of the 4 edge pixels -- le
 	1. Should not affect the game since the ball is unable to completely go through the "wall" and must go in the opposite direction to get out of the "wall." Unfortunately, I am unsure of why this is possible and can not suggest a fix at the moment.
 2. *Since only the 4 edge pixels of the ball are being checked, the ball is able to visually slide into the "wall" at corners if the edge pixel that is being checked is just slightly above the "wall".*
 	1. Again, the ball is still unable to completely go through such "walls", thus this shouldn't be an issue. To fix this, the module would have to check every pixel along the ball's edge (which would be tedious).
+3. *If the movement buttons are pressed in a certain manner, the ball is sometimes able to move diagonally and is able to bypass all components*
+	1. Unfortunately, I am also unsure of why this is possible since I have made the motion `if` conditions strict. Only when one button is pressed and the other three are not should the ball gain motion in the corresponding direction. Usually, entering and exiting this "diagonal" state is hard to control and the user would most likely have to reset the ball's position to continue playing.
+
 
 The result are as such:
 
 ![maze_component_collision.gif](./Images/maze_component_collision.gif)
+
+### 6. Level Transition
+The final stretch of this project is to implement level transition. There was a reason why I implemented the "exit" component into the maze map -- so that the player can play multiple pre-made levels of the game. I have created a second level, called `level1.vhd`, using a [30x30 hedge maze](https://www.reddit.com/r/dndmaps/comments/inphp7/hedge_maze_30x30/) that I found online as reference. Thanks to my prior level making implementation, creating this new level was trivial (just denote which cells are what component). 
+
+To add this new level into the project, I had to create separate signals for each level, as well as a level counter to determine which level's signals are to be passed onto the other modules (namely `mazeMap.vhd` and `ball.vhd`). This part was quite simple and I did not run into any issues along the way. I did this same thing to determine which pixels are to be drawn as the ball and which are to be drawn as the map earlier in this project. The only "setback" I encountered was due to me accidentally assigning the wrong signal to a port (`start_x_0` instead of `start_y_0` into `start_y_pass`), which resulted in the wrong output and had me thinking that there was a bug with this portion when there was not.
+
+Since the collision aspect is tied to the ball itself, the "real" level counter would have to be a out signal from `ball.vhd`, which on the surface does not seem like too much of a problem. Just create an `std_logic_vector` signal (called `level_count`) that increments when the ball collides with an exit cell and output the signal to the top level to change which level's signals are being ported in. However, since signals do not get updated until the process is finished, I could not reset the ball to its intended initial position at the new level (because the new initial positions do not come in until the next cycle). I originally wanted to create a separate process that would initialize the ball's position when the level counter changed, but the problem with that was I could not use assignments of the same signals in different processes. The solution I came up with was to create a second level counter signal (called `level_count_old`) and an `if` statement such that if the two counters are not equal, then initialize the ball's position and then assign the first counter to the second (so that they are equal again). This would allow the intended positions to be ported in after the first process, then automatically reset the ball's position in the next process.
+
+Finally, I also added an extra button, CPU_RESET, to allow the player to return to level0. I initially did not know that the signal for this button is *inversed* compared to the rest, so I had a little bit of trouble until I figured that out.
+
+And with that, MazeGame is fully functional!
+
+![working_mazeGame.gif](./Images/working_mazeGame.gif)
+
+###### NOTE: I did consider also implementing text popup on the levels to show instructions on how to play, what level the player is currently on, and how much time has passed, but decided against it due to time constraints.
+
+###### Documentation on how to implement new levels and how to play MazeGame are in the other Markdown files in this repository.
